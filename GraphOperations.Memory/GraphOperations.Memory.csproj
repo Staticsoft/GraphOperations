@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net60</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Staticsoft.$(MSBuildProjectName)</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GraphOperations.Abstractions\GraphOperations.Abstractions.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Staticsoft.Extensions.DependencyInjection" Version="1.0.0-3" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <PackageId>Staticsoft.$(MSBuildProjectName)</PackageId>
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/Staticsoft/GraphOperations</RepositoryUrl>
+  </PropertyGroup>
+
+</Project>

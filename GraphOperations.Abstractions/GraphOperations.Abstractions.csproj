@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net60</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Staticsoft.$(MSBuildProjectName)</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>Staticsoft.$(MSBuildProjectName)</PackageId>
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/Staticsoft/GraphOperations</RepositoryUrl>
+  </PropertyGroup>
+
+</Project>
