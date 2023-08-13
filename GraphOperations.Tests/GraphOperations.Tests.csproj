@@ -4,6 +4,8 @@
     <TargetFramework>net60</TargetFramework>
     <RootNamespace>Staticsoft.$(MSBuildProjectName)</RootNamespace>
     <IsPackable>false</IsPackable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
