@@ -36,7 +36,8 @@ public class ObjectGraphProcessor
 
         return Try
             .Return(() => Graph[GetRootKey(references)])
-            .On<InvalidOperationException>(Exception("Unable to find root operation"));
+            .On<InvalidOperationException>(Exception("Unable to find root operation"))
+            .Result();
     }
 
     string GetRootKey(HashSet<string> references)
