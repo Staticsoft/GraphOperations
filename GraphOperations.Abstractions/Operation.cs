@@ -7,12 +7,6 @@ public interface Operation
     Type PropertiesType { get; }
 }
 
-
-public interface GraphProcessor
-{
-    Task<object> Process(string serializedGraph);
-}
-
 public abstract class Operation<Properties, Result> : Operation
     where Result : OperationResult
 {
@@ -26,9 +20,4 @@ public abstract class Operation<Properties, Result> : Operation
         => await Process((Properties)properties);
 
     protected abstract Task<Result> Process(Properties properties);
-}
-
-public interface OperationResult
-{
-    public object RefAttribute { get; }
 }

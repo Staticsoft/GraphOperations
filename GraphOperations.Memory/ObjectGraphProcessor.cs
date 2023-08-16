@@ -34,16 +34,14 @@ public class ObjectGraphProcessor
             }
         }
 
-        try
-        {
-            var rootKey = Graph.Keys.Single(nodeName => !references.Contains(nodeName));
-            return Graph[rootKey];
-        }
-        catch (InvalidOperationException)
-        {
-            throw new DecideLaterException();
-        }
+        return Try
+            .Return(() => Graph[GetRootKey(references)])
+            .On<InvalidOperationException>(Exception("Unable to find root operation"))
+            .Result();
     }
+
+    string GetRootKey(HashSet<string> references)
+        => Graph.Keys.Single(nodeName => !references.Contains(nodeName));
 
     IEnumerable<string> FindReferences(object node)
     {
@@ -58,7 +56,7 @@ public class ObjectGraphProcessor
             {
                 if (dictionary["Ref"] is not string reference)
                 {
-                    throw new DecideLaterException();
+                    throw Error($"A node has a `Ref` field with unexpected type: {dictionary["Ref"].GetType().FullName}. A string was expected");
                 }
 
                 yield return reference;
@@ -66,14 +64,18 @@ public class ObjectGraphProcessor
 
             if (dictionary.ContainsKey("GetAtt"))
             {
-                if (dictionary["GetAtt"] is not object[] attributeReference || attributeReference.Length != 2)
+                if (dictionary["GetAtt"] is not object[] attributeReference)
                 {
-                    throw new DecideLaterException();
+                    throw Error($"A node has a `GetAtt` field with unexpected type: {dictionary["GetAtt"].GetType().FullName}. A string array was expected");
+                }
+                if (attributeReference.Length != 2)
+                {
+                    throw Error($"A node has a `GetAtt` field with unexepcted amount of elements: {attributeReference.Length}. An array was expected to have 2 elements");
                 }
 
                 var reference = attributeReference.First() as string;
 
-                yield return reference ?? throw new DecideLaterException();
+                yield return reference ?? throw Error($"A node has a `GetAtt` field with unexpected type of the first element: {attributeReference.First().GetType().FullName}. A string was expected");
             }
         }
         if (node is object[] array)
@@ -99,7 +101,7 @@ public class ObjectGraphProcessor
     }
 
     Task<object[]> ProcessArray(object[] array)
-        => Task.WhenAll(array.Select(item => ProcessNode(item)));
+        => Task.WhenAll(array.Select(ProcessNode));
 
     async Task<Dictionary<string, object>> ProcessPropertyValues(Dictionary<string, object> dictionary)
     {
@@ -123,28 +125,32 @@ public class ObjectGraphProcessor
         {
             if (dictionary["Ref"] is not string reference)
             {
-                throw new DecideLaterException();
+                throw Error($"A node has a `Ref` field with unexpected type: {dictionary["Ref"].GetType().FullName}. A string was expected");
             }
             return await ProcessReference(reference, nameof(OperationResult.RefAttribute));
         }
         if (dictionary.ContainsKey("GetAtt"))
         {
-            if (dictionary["GetAtt"] is not object[] attributeReference || attributeReference.Length != 2)
+            if (dictionary["GetAtt"] is not object[] attributeReference)
             {
-                throw new DecideLaterException();
+                throw Error($"A node has a `GetAtt` field with unexpected type: {dictionary["GetAtt"].GetType().FullName}. A string array was expected");
             }
-            var reference = attributeReference.First() as string ?? throw new DecideLaterException();
-            var attribute = attributeReference.Last() as string ?? throw new DecideLaterException();
+            if (attributeReference.Length != 2)
+            {
+                throw Error($"A node has a `GetAtt` field with unexepcted amount of elements: {attributeReference.Length}. An array was expected to have 2 elements");
+            }
+            var reference = attributeReference.First() as string ?? throw Error($"A node has a `GetAtt` field with unexpected type of the first element: {attributeReference.First().GetType().FullName}. A string was expected");
+            var attribute = attributeReference.Last() as string ?? throw Error($"A node has a `GetAtt` field with unexpected type of the second element: {attributeReference.First().GetType().FullName}. A string was expected");
             return await ProcessReference(reference, attribute);
         }
-        throw new DecideLaterException();
+        throw new NotSupportedException($"A node with keys [{string.Join(", ", dictionary.Keys)}] was recognized as a reference, but no supported reference keys were found");
     }
 
     async Task<object> ProcessReference(string reference, string attribute)
     {
         var processed = await ProcessNode(Graph[reference]);
-        var property = processed.GetType().GetProperty(attribute) ?? throw new DecideLaterException();
-        return property.GetValue(processed) ?? throw new DecideLaterException();
+        var property = processed.GetType().GetProperty(attribute) ?? throw Error($"An object of type {processed.GetType().FullName} was expected to have property '{attribute}', but there was no such property");
+        return property.GetValue(processed) ?? throw Error($"An object of type {processed.GetType().FullName} was expected to return non-nullable value when property '{attribute}' value was retrieved, but null was found");
     }
 
     async Task<object> ProcessOperation(Dictionary<string, object> dictionary)
@@ -153,14 +159,18 @@ public class ObjectGraphProcessor
         var operationData = GetNodeProperties(dictionary);
         var operation = Operations.Single(operation => operation.Type == operationName);
         var data = Serializer.ToType(operationData, operation.PropertiesType);
-        return await operation.Process(data) ?? throw new DecideLaterException();
+        return await operation.Process(data) ?? throw Error($"An operation of type {operation.GetType().FullName} was expected to return non-nullable value when processing object of type {data.GetType().FullName}, but null was found");
     }
 
     static string GetNodeType(Dictionary<string, object> node)
-        => node["Type"] as string ?? throw new DecideLaterException();
+        => node["Type"] as string ?? throw Error($"A node was expected to have 'Type' key, but only these keys were found: [{string.Join(", ", node.Keys)}]");
 
     static object GetNodeProperties(Dictionary<string, object> node)
         => node["Properties"];
-}
 
-public class DecideLaterException : Exception { }
+    static Func<Exception, Exception> Exception(string error)
+        => (exception) => new GraphProcessorException(error, exception);
+
+    static GraphProcessorException Error(string error)
+        => new(error);
+}
